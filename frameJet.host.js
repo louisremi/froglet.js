@@ -127,7 +127,6 @@ Guest.prototype = {
 			var height = this[0].offsetHeight;
 			setTimeout(function() {
 				var diff = height - e.source.innerHeight;
-				console.log( diff )
 				diff && e.source.resizeBy( 0, diff );
 			}, 250);
 		}
@@ -201,7 +200,7 @@ Guest.prototype = {
 	}
 };
 
-window.frameJet = { Guest: Guest };
+window.frameJet = Guest;
 
 // add "px" to a unitless dimension
 function dim(v){return +v==v?v+"px":v}
