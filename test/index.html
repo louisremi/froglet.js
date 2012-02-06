@@ -4,24 +4,99 @@
 <script src="http://code.jquery.com/jquery-latest.js"></script>
 <link rel="stylesheet" href="http://code.jquery.com/qunit/git/qunit.css" type="text/css" media="screen" />
 <script type="text/javascript" src="http://code.jquery.com/qunit/git/qunit.js"></script>
-
-<script src="../frameJet.host.js"></script>
-
-<script>
-$(function() {
-
-
-
-});
-</script>
-  
+<script src="../froglet.host.js"></script>
 </head>
 <body>
-	<h1 id="qunit-header">QUnit example</h1>
+	<h1 id="qunit-header">Froglet Host Tests. <i>Popup blocker should be disabled!</i></h1>
 	<h2 id="qunit-banner"></h2>
 	<div id="qunit-testrunner-toolbar"></div>
 	<h2 id="qunit-userAgent"></h2>
 	<ol id="qunit-tests"></ol>
 	<div id="qunit-fixture">test markup, will be hidden</div>
+
+<script>
+$(function() {
+	var guest1, guest2,
+		iframe1, iframe2,
+		$iframe1, $iframe2,
+		offset1, offset2;
+
+	test("Create guest iframe", function() {
+		guest1 = new froglet( "echoframe.html" );
+
+		equal( document.getElementsByTagName("iframe").length, 1, "One iframe is added to the DOM when a guest is created" );
+		equal( document.getElementsByTagName("iframe")[0], guest1[0], "1st iframe is correctly referenced by the 1st guest" );
+
+		guest2 = new froglet( "echoframe.html" );
+
+		equal( document.getElementsByTagName("iframe").length, 2, "More than one guest iframe can be created" );
+		equal( document.getElementsByTagName("iframe")[1], guest2[0], "2nd iframe node is correctly referenced by the 2nd guest" );
+	});
+	
+	test("Destroy guest iframe", function() {
+		guest1.close();
+
+		equal( document.getElementsByTagName("iframe").length, 1, "Only one iframe is removed from the document" );
+
+		guest2.close();
+
+		equal( document.getElementsByTagName("iframe").length, 0, "No iframe left in the document" );
+	});
+
+	test("Create guest iframe with params", function() {
+		guest1 = new froglet( "echoframe.html", {
+			top: 0,
+			left: 0,
+			width: 200,
+			height: "100%"
+		});
+
+		$iframe1 = $( guest1[0] );
+		offset1 = $iframe1.offset();
+		equal( $iframe1.css("top"), "0px", "iframe style.top is 0" );
+		equal( $iframe1.css("left"), "0px", "iframe style.left is 0" );
+		equal( offset1.top, 0, "iframe is displayed at the top" );
+		equal( offset1.left, 0, "iframe is displayed on the left" );
+		equal( $iframe1[0].style.bottom, "", "iframe style.bottom is an empty string" );
+		equal( $iframe1[0].style.right, "", "iframe style.right is an empty string" );
+		equal( $iframe1.width(), 200, "iframe computed width is 200" );
+		equal( $iframe1.height(), $( window ).height(), "iframe computed height is 100% of the page" );
+
+		guest2 = new froglet( "echoframe.html", {
+			bottom: 0,
+			right: 0,
+			width: "200",
+			height: 200
+		});
+
+		$iframe2 = $( guest2[0] );
+		offset2 = $iframe2.offset();
+		equal( $iframe2.css("bottom"), "0px", "iframe style.bottom is 0" );
+		equal( $iframe2.css("right"), "0px", "iframe style.right is 0" );
+		equal( offset2.top, $( window ).height() - 200, "iframe is displayed at the bottom" );
+		equal( offset2.left, $( window ).width() - 200, "iframe is displayed on the right" );
+		equal( $iframe2[0].style.top, "", "iframe style.top is an empty string" );
+		equal( $iframe2[0].style.left, "", "iframe style.left is an empty string" );
+		equal( $iframe2.height(), 200, "iframe computed height is 200" );
+		equal( $iframe2.width(), 200, "iframe computed width is 100% of the page" );
+
+		guest1.close();
+		guest2.close();
+	});
+
+
+
+	test("Receive messages", function() {
+		stop();
+
+		
+	});
+
+	test("Emit messages", function() {
+		
+	});
+});
+</script>
+
 </body>
 </html>

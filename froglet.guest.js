@@ -13,7 +13,7 @@ var hostWindow = ( window.opener || window ).parent,
 if ( !hostWindow ) { return; }
 
 // find the id of this widget in the url
-location.search.replace(/(?:\?|&)fjId=(\w*?)(?:&|#|$)/, function(a,b) {
+location.search.replace(/(?:\?|&)flId=(\w*?)(?:&|#|$)/, function(a,b) {
 	id = b;
 });
 
@@ -33,7 +33,7 @@ if ( _addEventListener in window ) {
 }
 
 function insertControls() {
-	// simple way to make sure that frameJet is only initialized once
+	// simple way to make sure that froglet is only initialized once
 	if ( ready ) { return; }
 
 	var divs = "",
@@ -48,30 +48,30 @@ function insertControls() {
 	btns.togglePop = isPopup ? [ "Pop-In", "\u2299" ] : [ "Pop-Out", "\u229A" ];
 
 	style =
-		"#fj_controls { position: fixed; top: 0; left: 0; padding: 5px; background: #ccc; height: 18px; width: 100%; cursor: default; border-bottom: 1px solid #666 }\n" + 
-		".fjBtn { display: inline-block; font-family: monospace; line-height: 18px; font-size: 30px; cursor: pointer }\n"+
-		"#fj_controls.fjMin { padding: 1px; } .fjMin .fjBtn { display: none; } .fjMin #fj_toggleSize { display: block } .fjMin #fj_toggleSize:after { content: '\u2295' }";
+		"#fl_controls { position: fixed; top: 0; left: 0; padding: 5px; background: #ccc; height: 18px; width: 100%; cursor: default; border-bottom: 1px solid #666 }\n" + 
+		".flBtn { display: inline-block; font-family: monospace; line-height: 18px; font-size: 30px; cursor: pointer }\n"+
+		"#fl_controls.flMin { padding: 1px; } .flMin .flBtn { display: none; } .flMin #fl_toggleSize { display: block } .flMin #fl_toggleSize:after { content: '\u2295' }";
 
 	for ( btn in btns ) {
-		style += "#fj_" + btn + ":after { content: '" + btns[ btn ][1] + "' }\n";
-		divs += "<div id='fj_" + btn + "' class='fjBtn' title='" + btns[ btn ][0] + "'></div>\n";
+		style += "#fl_" + btn + ":after { content: '" + btns[ btn ][1] + "' }\n";
+		divs += "<div id='fl_" + btn + "' class='flBtn' title='" + btns[ btn ][0] + "'></div>\n";
 	}
 
-	style += "#fj_togglePosition:hover:after { content: '\u229b' }";
+	style += "#fl_togglePosition:hover:after { content: '\u229b' }";
 
 	container = document.createElement( "div" );
-	container.id = "fj_controls";
-	container.innerHTML = "<style id='fj_style'>" + style + "</style>" + divs;
+	container.id = "fl_controls";
+	container.innerHTML = "<style id='fl_style'>" + style + "</style>" + divs;
 
 	container.onclick = function( e, internal ) {
 		var target = e ? e.target : window.event.srcElement,
-			type = target.id.replace( /^fj_(\w*?)$/, "$1" );
+			type = target.id.replace( /^fl_(\w*?)$/, "$1" );
 
 		if ( type == "toggleSize" ) {
 			if ( target.title == "Minimize" ) {
 				target.title = "Maximize";
 				body.style.overflow = "hidden";
-				container.className = "fjMin";
+				container.className = "flMin";
 			} else {
 				target.title = "Minimize";
 				body.style.overflow = "";
@@ -84,7 +84,7 @@ function insertControls() {
 			return close();
 		}
 
-		!internal && frameJet.emit( type, null, true );
+		!internal && froglet.emit( type, null, true );
 	}
 
 	body.appendChild( container );
@@ -101,7 +101,7 @@ window[ listen ](msgEvent, function( e ) {
 
 	// toggleSize, close, etc.
 	if ( message.internal ) {
-		container.onclick( { target: document.getElementById( "fj_" + type ) }, true );
+		container.onclick( { target: document.getElementById( "fl_" + type ) }, true );
 
 	// dispatch payload
 	} else if ( ( listeners = routes[ type ] ) ) {
@@ -113,10 +113,10 @@ window[ listen ](msgEvent, function( e ) {
 }, false);
 
 // API availble to guest window
-window.frameJet = {
+window.froglet = {
 	emit: function( type, payload, internal ) {
 		var message = { 
-			fjId: id,
+			flId: id,
 			type: type
 		};
 
@@ -147,7 +147,7 @@ window.frameJet = {
 
 // The host need a new reference to the guest if it was opened in a popup
 if ( isPopup ) {
-	frameJet.emit( "togglePop", "popout", true );
+	froglet.emit( "togglePop", "popout", true );
 }
 
 })(window,document);

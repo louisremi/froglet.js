@@ -4,12 +4,12 @@
 </head>
 <body onload="go()">
 
-<script src="../frameJet.host.js"></script>
+<script src="../froglet.host.js"></script>
 <script>
 	var guest1, guest2;
 
 	function go() {
-		guest1 = new frameJet.Guest( "frame.html", {
+		guest1 = new froglet( "frame.html", {
 			width: "250",
 			height: "100%",
 			bottom: 0,
@@ -17,7 +17,7 @@
 			background: "pink"
 		});
 		
-		guest2 = new frameJet.Guest( "frame.html", {
+		guest2 = new froglet( "frame.html", {
 			width: "100%",
 			height: "150",
 			bottom: 0,

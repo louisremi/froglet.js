@@ -32,10 +32,10 @@ function Guest( url, options ) {
 		frameDomain;
 
 	// give this guest a unique identifier to allow multiple guests
-	this.id = "fj" + Math.round( Math.random() * 1E6 );
+	this.id = "fl" + Math.round( Math.random() * 1E6 );
 	// insert the identifier in the url
 	this.url = url.replace(/(\?|#|$)/, function( chr ) {
-		return "?fjId=" + self.id + (
+		return "?flId=" + self.id + (
 			chr == "?" ? "&":
 			chr == "#" ? "#":
 			""
@@ -56,7 +56,7 @@ function Guest( url, options ) {
 			i;
 
 		// filter the messages according to their origin and id
-		if ( e.origin !== frameDomain || message.fjId !== self.id ) {	return;	}
+		if ( e.origin !== frameDomain || message.flId !== self.id ) {	return;	}
 
 		// toggleSize, close, etc.
 		if ( message.internal ) {
@@ -200,7 +200,7 @@ Guest.prototype = {
 	}
 };
 
-window.frameJet = Guest;
+window.froglet = Guest;
 
 // add "px" to a unitless dimension
 function dim(v){return +v==v?v+"px":v}
