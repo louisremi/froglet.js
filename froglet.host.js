@@ -48,7 +48,9 @@ function Guest( url, options ) {
 	window[ listen ](msgEvent, function( e ) {
 
 		// search for the domain of the frame (only once)
-		!frameDomain && ( frameDomain = self.guestWindow.location.href.replace( /^(\w*:\/\/.*?)(?:\/.*|$)/, "$1" ) );
+		if ( !frameDomain && self.guestWindow.location ) {
+			frameDomain = self.guestWindow.location.href.replace( /^(\w*:\/\/.*?)(?:\/.*|$)/, "$1" );
+		}
 
 		var message = JSON.parse( e.data ),
 			type = message.type,

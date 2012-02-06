@@ -89,11 +89,26 @@ $(function() {
 	test("Receive messages", function() {
 		stop();
 
-		
+		guest1 = new froglet("testframe.html", {
+			bottom: 0,
+			width: "100%",
+			height: 250
+		});
+
+		guest1.on("text", function( message ) {
+			equal( message, "hello world", "Receiving a text string" );
+		});
+
+		guest1.on("object", function( message ) {
+			strictEqual( message.prop, 12, "Receiving an object" );
+
+			start();
+		});
 	});
 
 	test("Emit messages", function() {
-		
+		guest1.emit("text", "hello world");
+		guest1.emit("object", { prop: 12 });
 	});
 });
 </script>
