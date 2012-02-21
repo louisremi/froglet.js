@@ -15,9 +15,9 @@ var hostWindow = ( window.opener || window ).parent,
 //if ( !hostWindow ) { return; }
 
 // find the id of this widget in the url
-id = getFrag( "flId=(\\w*?)" );
-// find the position of this widget
-position = getFrag( "flPos=([\\d,]*?)" ).split(",");
+location.search.replace( /(?:\?|&)flId=(\w*?)(?:&|#|$)/, function(a,b) {
+	id = b;
+});
 
 // find the proxy iframe if the widget is loaded in a popup
 // a proxy is required in IE, since window.opener.postMessage is forbiden
@@ -94,21 +94,25 @@ function insertControls() {
 			}
 
 		} else if ( type == "togglePop" && !isPopup ) {
+			// ask host what is the current position of the widget in the iframe
+			froglet.emit( "pos", undefined, true );
+
 			// open popup
 			popup = open( location, "",
 				"width=" + ( window.innerWidth || docEl.clientWidth ) +
-				",height=" + ( window.innerHeight || docEl.clientHeight ) +
-				",left=" + ( +position[0] + screenX ) +
-				",top=" + ( +position[1] + screenY )
+				",height=" + ( window.innerHeight || docEl.clientHeight )
 			);
 
 			// In Chrome, the size of the popup includes the browser chrome.
-			// Use a dirty hack to fix the size if needed
+			// In all browser, the position of the popup is calculated by the host
+			// and only available after the popup has been opened
+			// Use a setTimeout to fix the size if needed and set the position of the popup
 			var height = window.innerHeight;
 			setTimeout(function() {
 				var diffH = height - popup.innerHeight;
 				diffH && popup.resizeBy( 0, diffH );
-			}, 250);
+				popup.moveTo.apply( undefined, position );
+			}, 200);
 
 		} else if ( ( type == "close" || type == "togglePop" ) && isPopup ) {
 			close();
@@ -135,8 +139,8 @@ window[ listen ](msgEvent, function( e ) {
 
 	} else if ( message.internal ) {
 		type == "pos" ?
-			// update position
-			position = message.payload :
+			// store position
+			position = [ screenX + message.payload[0], screenY + message.payload[1] ] :
 			// toggleSize, close, etc.
 			container.onclick( { target: document.getElementById( "fl_" + type ) }, true );
 
@@ -184,15 +188,5 @@ window.froglet = {
 
 // overwrite froglet.emit to use a proxy if available
 proxy && ( froglet.emit = proxy.froglet.emit );
-
-/*
- * Private utils
- */
-function getFrag( search, frag ) {
-	location.search.replace( RegExp("(?:\\?|&)" + search + "(?:&|#|$)"), function(a,b) {
-		frag = b;
-	});
-	return frag;
-}
 
 })(window,document);

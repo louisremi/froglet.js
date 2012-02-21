@@ -50,14 +50,17 @@ function Guest( url, options ) {
 
 		var message = JSON.parse( e.data ),
 			type = message.type,
-			listeners,
+			bcr, listeners,
 			i;
 		// filter the messages according to their origin and id
 		if ( e.origin !== frameDomain || message.flId !== self.id ) {	return;	}
 
-		// toggleSize, close, etc.
 		if ( message.internal ) {
-			self[ type ]( e, message.payload );
+			type == "pos" ?
+				// reply with current position of the widget
+				self.emit( type, ( bcr = self[0].getBoundingClientRect() ) && [ bcr.left, bcr.top ], true ) :
+				// toggleSize, close, etc.
+				self[ type ]( e, message.payload );
 
 		// dispatch payload
 		} else if ( ( listeners = self.routes[ type ] ) ) {
@@ -109,7 +112,6 @@ Guest.prototype = {
 		}
 
 		!noEmit && this.emit( "togglePosition", undefined, true );
-		this.emit( "pos", getPos( this[0] ), true );
 	},
 
 	togglePop: function() {
@@ -191,7 +193,7 @@ Guest.prototype = {
 				chr == "?" ? "&":
 				chr == "#" ? "#":
 				""
-			) + "&flPos=" + getPos( frame );
+			);
 		});
 
 		this[0] = frame;
