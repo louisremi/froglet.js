@@ -1,21 +1,35 @@
-(function(window,document){
+(function(window,document,undefined) {
 
 var hostWindow = ( window.opener || window ).parent,
+	docEl = document.documentElement,
 	isPopup = !!window.opener,
-	id,
+	id, position,
+	proxy,
 	_addEventListener = "addEventListener",
 	_message = "message",
 	routes = {},
 	container,
-	listen, msgEvent, ready;
+	listen, msgEvent, ready, popup, i;
 
 // You're wasting my time!
-if ( !hostWindow ) { return; }
+//if ( !hostWindow ) { return; }
 
 // find the id of this widget in the url
-location.search.replace(/(?:\?|&)flId=(\w*?)(?:&|#|$)/, function(a,b) {
-	id = b;
-});
+id = getFrag( "flId=(\\w*?)" );
+// find the position of this widget
+position = getFrag( "flPos=([\\d,]*?)" ).split(",");
+
+// find the proxy iframe if the widget is loaded in a popup
+// a proxy is required in IE, since window.opener.postMessage is forbiden
+if ( isPopup ) {
+	i = hostWindow.frames.length;
+	while ( i-- ) {
+		if ( hostWindow.frames[i].id == id ) {
+			proxy = hostWindow.frames[i];
+			break;
+		}
+	}
+}
 
 // feature detection
 if ( _addEventListener in window ) {
@@ -48,21 +62,22 @@ function insertControls() {
 	btns.togglePop = isPopup ? [ "Pop-In", "\u2299" ] : [ "Pop-Out", "\u229A" ];
 
 	style =
-		"#fl_controls { position: fixed; top: 0; left: 0; padding: 5px; background: #ccc; height: 18px; width: 100%; cursor: default; border-bottom: 1px solid #666 }\n" + 
-		".flBtn { display: inline-block; font-family: monospace; line-height: 18px; font-size: 30px; cursor: pointer }\n"+
-		"#fl_controls.flMin { padding: 1px; } .flMin .flBtn { display: none; } .flMin #fl_toggleSize { display: block } .flMin #fl_toggleSize:after { content: '\u2295' }";
+		"#fl_controls{position:fixed;top:0;left:0;padding:5px;background:#ccc;height:18px;width:100%;border-bottom:1px solid #666} " +
+		".flBtn{display:inline-block;font-family:monospace;line-height:18px;font-size:30px;cursor:pointer} " +
+		"#fl_controls.flMin{padding:1px} .flMin .flBtn{display:none} .flMin #fl_toggleSize{display:block} .flMin #fl_toggleSize:after{content:'\u2295'}";
 
 	for ( btn in btns ) {
-		style += "#fl_" + btn + ":after { content: '" + btns[ btn ][1] + "' }\n";
+		style += " #fl_" + btn + ":after{content:'" + btns[ btn ][1] + "'}";
 		divs += "<div id='fl_" + btn + "' class='flBtn' title='" + btns[ btn ][0] + "'></div>\n";
 	}
 
-	style += "#fl_togglePosition:hover:after { content: '\u229b' }";
+	style += "#fl_togglePosition:hover:after{content:'\u229b'}";
 
 	container = document.createElement( "div" );
 	container.id = "fl_controls";
-	container.innerHTML = "<style id='fl_style'>" + style + "</style>" + divs;
+	container.innerHTML = divs + "&nbsp;<style id='fl_style'>" + style + "</style>";
 
+	// event delegation
 	container.onclick = function( e, internal ) {
 		var target = e ? e.target : window.event.srcElement,
 			type = target.id.replace( /^fl_(\w*?)$/, "$1" );
@@ -77,14 +92,29 @@ function insertControls() {
 				body.style.overflow = "";
 				container.className = "";
 			}
+
 		} else if ( type == "togglePop" && !isPopup ) {
-			open( location, "", "width=" + innerWidth + ",height=" + innerHeight );
-			internal = true;
-		} else if ( type == "close" && isPopup ) {
-			return close();
+			// open popup
+			popup = open( location, "",
+				"width=" + ( window.innerWidth || docEl.clientWidth ) +
+				",height=" + ( window.innerHeight || docEl.clientHeight ) +
+				",left=" + ( +position[0] + screenX ) +
+				",top=" + ( +position[1] + screenY )
+			);
+
+			// In Chrome, the size of the popup includes the browser chrome.
+			// Use a dirty hack to fix the size if needed
+			var height = window.innerHeight;
+			setTimeout(function() {
+				var diffH = height - popup.innerHeight;
+				diffH && popup.resizeBy( 0, diffH );
+			}, 250);
+
+		} else if ( ( type == "close" || type == "togglePop" ) && isPopup ) {
+			close();
 		}
 
-		!internal && froglet.emit( type, null, true );
+		!internal && froglet.emit( type, undefined, true );
 	}
 
 	body.appendChild( container );
@@ -99,9 +129,16 @@ window[ listen ](msgEvent, function( e ) {
 		listeners,
 		i;
 
-	// toggleSize, close, etc.
-	if ( message.internal ) {
-		container.onclick( { target: document.getElementById( "fl_" + type ) }, true );
+	// proxy messages to the popup
+	if ( message.proxy ) {
+		popup.postMessage( e.data, "*" );
+
+	} else if ( message.internal ) {
+		type == "pos" ?
+			// update position
+			position = message.payload :
+			// toggleSize, close, etc.
+			container.onclick( { target: document.getElementById( "fl_" + type ) }, true );
 
 	// dispatch payload
 	} else if ( ( listeners = routes[ type ] ) ) {
@@ -143,11 +180,19 @@ window.froglet = {
 			delete routes[ type ];
 		}
 	}
-}
+};
 
-// The host need a new reference to the guest if it was opened in a popup
-if ( isPopup ) {
-	froglet.emit( "togglePop", "popout", true );
+// overwrite froglet.emit to use a proxy if available
+proxy && ( froglet.emit = proxy.froglet.emit );
+
+/*
+ * Private utils
+ */
+function getFrag( search, frag ) {
+	location.search.replace( RegExp("(?:\\?|&)" + search + "(?:&|#|$)"), function(a,b) {
+		frag = b;
+	});
+	return frag;
 }
 
 })(window,document);

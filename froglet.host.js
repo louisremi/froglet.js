@@ -1,17 +1,18 @@
-(function(window,document,parseFloat) {
+(function(window,document,Math,parseFloat,undefined) {
 
 var defaults = {
 		width: "100%",
 		height: 200,
 		bottom: 0,
 		left: 0,
-		top: null,
-		right: null,
+		top: undefined,
+		right: undefined,
 		border: "none",
 		background: "white"
 	},
 	_addEventListener = "addEventListener",
 	_message = "message",
+	_popup = "popup",
 	listen, msgEvent;
 
 // feature detection
@@ -25,22 +26,16 @@ if ( _addEventListener in window ) {
 
 function Guest( url, options ) {
 	options = extend( {}, defaults, options );
-	options.top != null && options.bottom === 0 && ( options.bottom = null );
-	options.right != null && options.left === 0 && ( options.left = null );
+	options.top != undefined && options.bottom === 0 && ( options.bottom = undefined );
+	options.right != undefined && options.left === 0 && ( options.left = undefined );
 
 	var self = this,
 		frameDomain;
 
 	// give this guest a unique identifier to allow multiple guests
 	this.id = "fl" + Math.round( Math.random() * 1E6 );
-	// insert the identifier in the url
-	this.url = url.replace(/(\?|#|$)/, function( chr ) {
-		return "?flId=" + self.id + (
-			chr == "?" ? "&":
-			chr == "#" ? "#":
-			""
-		);
-	});
+
+	this.url = url
 	this.options = options;
 	this.routes = {};
 	
@@ -49,14 +44,14 @@ function Guest( url, options ) {
 
 		// search for the domain of the frame (only once)
 		if ( !frameDomain && self.guestWindow.location ) {
-			frameDomain = self.guestWindow.location.href.replace( /^(\w*:\/\/.*?)(?:\/.*|$)/, "$1" );
+			frameDomain = self.guestWindow.location.href;
+			frameDomain = frameDomain.replace( /^(\w*:\/\/.*?)(?:\/.*|$)/, "$1" );
 		}
 
 		var message = JSON.parse( e.data ),
 			type = message.type,
 			listeners,
 			i;
-
 		// filter the messages according to their origin and id
 		if ( e.origin !== frameDomain || message.flId !== self.id ) {	return;	}
 
@@ -81,16 +76,17 @@ Guest.prototype = {
 	toggleSize: function( noEmit ) {
 		var frameStyle = this[0].style;
 
-		if ( this.isMinimized ) {
+		if ( this.state == "min" ) {
 			frameStyle.width = this.fullWidth;
 			frameStyle.height = this.fullHeight;
-		} else {
+			this.state = "open";
+
+		} else if ( this.state == "open" ) {
 			frameStyle.height = frameStyle.width = "20px";
+			this.state = "min"
 		}
 
-		this.isMinimized = !this.isMinimized;
-
-		!noEmit && this.emit( "minimize", null, true );
+		!noEmit && this.emit( "toggleSize", undefined, true );
 	},
 
 	togglePosition: function( noEmit ) {
@@ -112,32 +108,20 @@ Guest.prototype = {
 			frameStyle.left = 0;
 		}
 
-		!noEmit && this.emit( "minimize", null, true );
+		!noEmit && this.emit( "togglePosition", undefined, true );
+		this.emit( "pos", getPos( this[0] ), true );
 	},
 
-	togglePop: function( e, popout ) {
-		popout = popout === "popout";
+	togglePop: function() {
+		if ( this.state == _popup ) {
+			//this.guestWindow.close();
+			this.state = "open";
+			this[0].style.display = "block";
 
-		this.guestWindow = e.source;
-
-		if ( popout ) {
-			// Set popup position
-			e.source.moveTo( this[0].offsetLeft, this[0].offsetTop );
-
-			// In chrome, the size of the popup includes the browser chrome.
-			// Use a dirty hack to resize the *window* if needed
-			var height = this[0].offsetHeight;
-			setTimeout(function() {
-				var diff = height - e.source.innerHeight;
-				diff && e.source.resizeBy( 0, diff );
-			}, 250);
+		} else {
+			this.state = _popup;
+			this[0].style.display = "none";
 		}
-
-		// Close popup of iframe
-		this.close();
-
-		// Create a new iframe
-		!popout && this.open();
 	},
 
 	emit: function( type, payload, internal ) {
@@ -145,6 +129,7 @@ Guest.prototype = {
 
 		internal && ( message.internal = internal );
 		payload && ( message.payload = payload );
+		this.state == _popup && ( message.proxy = +true );
 
 		this.guestWindow.postMessage( JSON.stringify( message ), "*" );
 	},
@@ -166,39 +151,52 @@ Guest.prototype = {
 			delete this.routes[ type ];
 		}
 	},
-	
+
 	close: function() {
-		if ( this[0] ) {
-			document.body.removeChild( this[0] );
-			this[0] = null;
-		} else {
-			this.guestWindow.close();
-		}
+		this.state == _popup ?
+			this.guestWindow.close() :
+			this[0].style.display = "none";
+
+		document.body.removeChild( this[0] );
+
+		this.state = false;
 	},
 
 	open: function() {
 		var frame = document.createElement( "iframe" ),
 			frameStyle = frame.style,
 			options = this.options,
+			self = this,
 			frameDomain;
+
+		frame.id = this.id;
 
 		// Set frame style
 		this.fullWidth = frameStyle.width = dim( options.width );
 		this.fullHeight = frameStyle.height = dim( options.height );
-		frameStyle.border = options.border;
+		frame.frameBorder = 0;
 		frameStyle.background = options.background;
 		frameStyle.position = "fixed";
 		frameStyle.zIndex = 1001;
-		options.bottom != null && ( frameStyle.bottom = dim( options.bottom ) );
-		options.top != null && ( frameStyle.top = dim( options.top ) );
-		options.left != null && ( frameStyle.left = dim( options.left ) );
-		options.right != null && ( frameStyle.right = dim( options.right ) );
+		options.bottom != undefined && ( frameStyle.bottom = dim( options.bottom ) );
+		options.top != undefined && ( frameStyle.top = dim( options.top ) );
+		options.left != undefined && ( frameStyle.left = dim( options.left ) );
+		options.right != undefined && ( frameStyle.right = dim( options.right ) );
 
-		frame.src = this.url;
 		document.body.appendChild( frame );
+
+		// insert the identifier & the position in the url
+		frame.src = this.url.replace(/(\?|#|$)/, function( chr ) {
+			return "?flId=" + self.id + (
+				chr == "?" ? "&":
+				chr == "#" ? "#":
+				""
+			) + "&flPos=" + getPos( frame );
+		});
 
 		this[0] = frame;
 		this.guestWindow = frame.contentWindow;
+		this.state = "open";
 	}
 };
 
@@ -210,4 +208,7 @@ function dim(v){return +v==v?v+"px":v}
 // extend an object
 function extend(c){for(var e=arguments.length,d=0,a,b;d++<e;)if(a=arguments[d],null!=a&&a!=c)for(b in a)void 0!==a[b]&&(c[b]=a[b]);return c};
 
-})(window,document,parseFloat,Math);
+// return top and left position relative to the window
+function getPos(e,b) {b=e.getBoundingClientRect();return[b.left,b.top]}
+
+})(window,document,Math,parseFloat);
