@@ -62,7 +62,7 @@ function insertControls() {
 	btns.togglePop = isPopup ? [ "Pop-In", "\u2299" ] : [ "Pop-Out", "\u229A" ];
 
 	style =
-		"#fl_controls{position:fixed;top:0;left:0;padding:5px;background:#ccc;height:18px;width:100%;border-bottom:1px solid #666} " +
+		"#fl_controls{position:fixed;top:0;left:0;padding:5px;background:#ccc;height:18px;width:100%;cursor:default;border-bottom:1px solid #666} " +
 		".flBtn{display:inline-block;font-family:monospace;line-height:18px;font-size:30px;cursor:pointer} " +
 		"#fl_controls.flMin{padding:1px} .flMin .flBtn{display:none} .flMin #fl_toggleSize{display:block} .flMin #fl_toggleSize:after{content:'\u2295'}";
 

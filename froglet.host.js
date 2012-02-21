@@ -7,8 +7,7 @@ var defaults = {
 		left: 0,
 		top: undefined,
 		right: undefined,
-		border: "none",
-		background: "white"
+		border: "none"
 	},
 	_addEventListener = "addEventListener",
 	_message = "message",
@@ -177,7 +176,6 @@ Guest.prototype = {
 		this.fullWidth = frameStyle.width = dim( options.width );
 		this.fullHeight = frameStyle.height = dim( options.height );
 		frame.frameBorder = 0;
-		frameStyle.background = options.background;
 		frameStyle.position = "fixed";
 		frameStyle.zIndex = 1001;
 		options.bottom != undefined && ( frameStyle.bottom = dim( options.bottom ) );
