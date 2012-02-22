@@ -11,9 +11,6 @@ var hostWindow = ( window.opener || window ).parent,
 	container,
 	listen, msgEvent, ready, i;
 
-// You're wasting my time!
-//if ( !hostWindow ) { return; }
-
 // find the id of this widget in the url
 location.search.replace( /(?:\?|&)flId=(\w*?)(?:&|#|$)/, function(a,b) {
 	id = b;
@@ -114,7 +111,7 @@ function insertControls() {
 			setTimeout(function() {
 				var diffH = height - popup.innerHeight;
 				diffH && popup.resizeBy( 0, diffH );
-				popup.moveTo.apply( undefined, position );
+				popup.moveTo.apply( popup, position );
 			}, 200);
 
 		} else if ( ( type == "close" || type == "togglePop" ) && isPopup ) {
@@ -133,8 +130,8 @@ function insertControls() {
 	ready = true;
 }
 
-// setup message router
-window[ listen ](msgEvent, function( e ) {
+// message routing
+function onmessage( e ) {
 	var message = JSON.parse( e.data ),
 		type = message.type,
 		listeners,
@@ -142,12 +139,12 @@ window[ listen ](msgEvent, function( e ) {
 
 	// proxy messages to the popup
 	if ( froglet.popup && type != "pos" ) {
-		froglet.popup.postMessage( e.data, "*" );
+		froglet.popup.froglet._direct( e );
 
 	} else if ( message.internal ) {
 		type == "pos" ?
 			// store position
-			position = [ screenX + message.payload[0], screenY + message.payload[1] ] :
+			position = [ ( window.screenX || screenLeft ) + message.payload[0], ( window.screenY || screenTop ) + message.payload[1] ] :
 			// toggleSize, close, etc.
 			container.onclick( { target: document.getElementById( "fl_" + type ) }, message.payload || true );
 
@@ -158,19 +155,23 @@ window[ listen ](msgEvent, function( e ) {
 			listeners[i]( message.payload );
 		}
 	}
-}, false);
+}
+
+// setup message router
+window[ listen ](msgEvent, onmessage, false);
 
 // API availble to guest window
 window.froglet = {
 	id: id,
-	emit: function( type, payload, internal ) {
+
+	emit: function( type, payload, internal, jsonPayload ) {
 		var message = { 
 			flId: id,
 			type: type
 		};
 
 		internal && ( message.internal = internal );
-		payload != undefined && ( message.payload = payload );
+		payload != undefined && ( message.payload = jsonPayload ? JSON.parse( payload ) : payload );
 
 		hostWindow.postMessage( JSON.stringify( message ), "*" );
 	},
@@ -191,10 +192,15 @@ window.froglet = {
 		} else {
 			delete routes[ type ];
 		}
-	}
+	},
+
+	_direct: onmessage
 };
 
 // overwrite froglet.emit to use a proxy if available
-proxy && ( froglet.emit = proxy.froglet.emit );
+proxy && ( froglet.emit = function( type, payload, internal ) {
+	// IE only support passing strings between window and window.opener
+	proxy.froglet.emit( type, JSON.stringify( payload ), internal, true );
+});
 
 })(window,document);

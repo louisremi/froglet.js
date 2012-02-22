@@ -103,7 +103,7 @@ $(function() {
 		});
 
 		guestTest.on("echoObjectFromFrame", function( data ) {
-			deepEqual( data, object, "correctly receive back value from iframe" );
+			deepEqual( data, object, "correctly receive back object from iframe" );
 			++nbMessages;
 			if ( nbMessages == 6 ) {
 				start();
@@ -116,7 +116,7 @@ $(function() {
 		});
 
 		guestTest.on("echoObjectFromPopup", function( data ) {
-			deepEqual( data, object, "correctly receive back value from popup" );
+			deepEqual( data, object, "correctly receive back object from popup" );
 			++nbMessages;
 		});
 
@@ -238,7 +238,8 @@ $(function() {
 	test("togglePop from host", function() {
 		stop();
 		var shouldBePopup = false,
-			nbMsgs = 0;
+			nbMsgs = 0,
+			defaultDisplay;
 
 		guest1 = new froglet( "popup.html", {
 			top: 0,
@@ -246,6 +247,10 @@ $(function() {
 			width: 200,
 			height: 200
 		});
+
+		$guest1 = $( guest1[0] );
+
+		defaultDisplay = $guest1.css( "display" );
 
 		setTimeout(function() {
 			shouldBePopup = true;
@@ -262,7 +267,7 @@ $(function() {
 		guest1.on("ispopup", function( isPopup ) {
 			equal( isPopup, shouldBePopup, "!!window.opener emited by guest is correct" );
 			equal( guest1.state, shouldBePopup ? "popup" : "open", "state of the guest is correct" );
-			equal( $( guest1[0] ).css( "display" ), shouldBePopup ? "none" : "block", "display of the guest is correct" );
+			equal( $guest1.css( "display" ), shouldBePopup ? "none" : ( nbMsgs ? "block" : defaultDisplay ), "display of the guest is correct" );
 
 			if ( ++nbMsgs == 3 ) {
 				guest1.close();
