@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../froglet.guest.js"></script>  
+</head>
+<body>
+<script>
+	froglet.on("value", function( data ) {
+		froglet.emit( window.opener ? "echoValueFromPopup" : "echoValueFromFrame", data );
+	});
+	froglet.on("object", function( data ) {
+		froglet.emit( window.opener ? "echoObjectFromPopup" : "echoObjectFromFrame", data );
+	});
+</script>
+</body>
+</html>

@@ -113,9 +113,12 @@ Guest.prototype = {
 		!noEmit && this.emit( "togglePosition", undefined, true );
 	},
 
-	togglePop: function() {
+	togglePop: function( noEmit ) {
+		// the dimensions of the open iframe need to be sent to the guest
+		// since they will be 0,0 once hidden
+		var dim = [ this[0].offsetWidth, this[0].offsetHeight ];
+
 		if ( this.state == _popup ) {
-			//this.guestWindow.close();
 			this.state = "open";
 			this[0].style.display = "block";
 
@@ -123,14 +126,15 @@ Guest.prototype = {
 			this.state = _popup;
 			this[0].style.display = "none";
 		}
+
+		!noEmit && this.emit( "togglePop", dim, true );
 	},
 
 	emit: function( type, payload, internal ) {
 		var message = { type: type };
 
 		internal && ( message.internal = internal );
-		payload && ( message.payload = payload );
-		this.state == _popup && ( message.proxy = +true );
+		payload != undefined && ( message.payload = payload );
 
 		this.guestWindow.postMessage( JSON.stringify( message ), "*" );
 	},
@@ -153,14 +157,11 @@ Guest.prototype = {
 		}
 	},
 
-	close: function() {
-		this.state == _popup ?
-			this.guestWindow.close() :
-			this[0].style.display = "none";
-
+	close: function( noEmit ) {
 		document.body.removeChild( this[0] );
-
 		this.state = false;
+
+		!noEmit && this.state == _popup && this.emit( "close", undefined, true );
 	},
 
 	open: function() {

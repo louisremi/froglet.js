@@ -16,18 +16,21 @@
 
 <script>
 $(function() {
-	var guest1, guest2,
-		iframe1, iframe2,
-		$iframe1, $iframe2,
-		offset1, offset2;
+	var guest1, guest2, guest3, guest4,
+		guestTest,
+		$iframe1, $iframe2, $iframe3, $iframe4,
+		$iframeTest,
+		offset1, offset2, offset3, offset4,
+		windowHeight, windowWidth;
 
 	test("Create guest iframe", function() {
-		guest1 = new froglet( "echoframe.html" );
+		guest1 = new froglet( "empty.html" );
 
+		equal( guest1.state, "open", "state of a newly created froglet is 'open'" );
 		equal( document.getElementsByTagName("iframe").length, 1, "One iframe is added to the DOM when a guest is created" );
 		equal( document.getElementsByTagName("iframe")[0], guest1[0], "1st iframe is correctly referenced by the 1st guest" );
 
-		guest2 = new froglet( "echoframe.html" );
+		guest2 = new froglet( "empty.html" );
 
 		equal( document.getElementsByTagName("iframe").length, 2, "More than one guest iframe can be created" );
 		equal( document.getElementsByTagName("iframe")[1], guest2[0], "2nd iframe node is correctly referenced by the 2nd guest" );
@@ -36,6 +39,7 @@ $(function() {
 	test("Destroy guest iframe", function() {
 		guest1.close();
 
+		equal( guest1.state, false, "state of a closed froglet is falsy" );
 		equal( document.getElementsByTagName("iframe").length, 1, "Only one iframe is removed from the document" );
 
 		guest2.close();
@@ -44,7 +48,7 @@ $(function() {
 	});
 
 	test("Create guest iframe with params", function() {
-		guest1 = new froglet( "echoframe.html", {
+		guest1 = new froglet( "empty.html", {
 			top: 0,
 			left: 0,
 			width: 200,
@@ -62,7 +66,7 @@ $(function() {
 		equal( $iframe1.width(), 200, "iframe computed width is 200" );
 		equal( $iframe1.height(), $( window ).height(), "iframe computed height is 100% of the page" );
 
-		guest2 = new froglet( "echoframe.html", {
+		guest2 = new froglet( "empty.html", {
 			bottom: 0,
 			right: 0,
 			width: "200",
@@ -84,31 +88,187 @@ $(function() {
 		guest2.close();
 	});
 
-
-
-	test("Receive messages", function() {
+	test("exchanging messages with widget", function() {
+		expect( 6 );
 		stop();
+		var value = "hello world",
+			object = { prop: 12 },
+			nbMessages = 0;
 
-		guest1 = new froglet("testframe.html", {
-			bottom: 0,
-			width: "100%",
-			height: 250
+		guestTest = new froglet("echo.html", { width: 0, height: 0 });
+
+		guestTest.on("echoValueFromFrame", function( data ) {
+			equal( data, value, "correctly receive back value from iframe" );
+			++nbMessages;
 		});
 
-		guest1.on("text", function( message ) {
-			equal( message, "hello world", "Receiving a text string" );
+		guestTest.on("echoObjectFromFrame", function( data ) {
+			deepEqual( data, object, "correctly receive back value from iframe" );
+			++nbMessages;
+			if ( nbMessages == 6 ) {
+				start();
+			}
 		});
 
-		guest1.on("object", function( message ) {
-			strictEqual( message.prop, 12, "Receiving an object" );
-
-			start();
+		guestTest.on("echoValueFromPopup", function( data ) {
+			equal( data, value, "correctly receive back value from popup" );
+			++nbMessages;
 		});
+
+		guestTest.on("echoObjectFromPopup", function( data ) {
+			deepEqual( data, object, "correctly receive back value from popup" );
+			++nbMessages;
+		});
+
+		setTimeout(function() {
+			guestTest.emit( "value", value );
+			guestTest.emit( "object", object );
+
+			// Pop-out
+			guestTest.togglePop();
+
+			setTimeout(function() {
+				guestTest.emit( "value", value );
+				guestTest.emit( "object", object );
+
+				// Pop-in
+				guestTest.togglePop();
+
+				setTimeout(function() {
+					guestTest.emit( "value", value );
+					guestTest.emit( "object", object );
+
+					setTimeout(function() {
+						guestTest.close();
+					}, 1000);
+				}, 1000);
+			}, 2000);
+		}, 1000);
 	});
 
-	test("Emit messages", function() {
-		guest1.emit("text", "hello world");
-		guest1.emit("object", { prop: 12 });
+	test("guest position & togglePosition from host", function() {
+		guest1 = new froglet( "empty.html", {
+			top: 0,
+			left: 0,
+			width: 200,
+			height: 200
+		});
+		guest2 = new froglet( "empty.html", {
+			top: 0,
+			right: 0,
+			width: 200,
+			height: 200
+		});
+		guest3 = new froglet( "empty.html", {
+			bottom: 0,
+			left: 0,
+			width: 200,
+			height: 200
+		});
+		guest4 = new froglet( "empty.html", {
+			bottom: 0,
+			right: 0,
+			width: 200,
+			height: 200
+		});
+
+		$iframe1 = $( guest1[0] );
+		$iframe2 = $( guest2[0] );
+		$iframe3 = $( guest3[0] );
+		$iframe4 = $( guest4[0] );
+
+		offset1 = $iframe1.offset();
+		offset2 = $iframe2.offset();
+		offset3 = $iframe3.offset();
+		offset4 = $iframe4.offset();
+
+		windowHeight = $( window ).height();
+		windowWidth = $( window ).width();
+
+		deepEqual( [ offset1.top, offset1.left ], [ 0, 0 ], "iframe is displayed at the top-left" );
+		deepEqual( [ offset2.top, offset2.left ], [ 0, windowWidth - 200 ], "iframe is displayed at the top-right" );
+		deepEqual( [ offset3.top, offset3.left ], [ windowHeight - 200, 0 ], "iframe is displayed at the bottom-left" );
+		deepEqual( [ offset4.top, offset4.left ], [ windowHeight - 200, windowWidth - 200 ], "iframe is displayed at the bottom-right" );
+
+		guest1.togglePosition();
+		guest2.togglePosition();
+		guest3.togglePosition();
+		guest4.togglePosition();
+
+		offset1 = $iframe1.offset();
+		offset2 = $iframe2.offset();
+		offset3 = $iframe3.offset();
+		offset4 = $iframe4.offset();
+
+		deepEqual( [ offset1.top, offset1.left ], [ windowHeight - 200, windowWidth - 200 ], "after togglePosition, iframe is displayed at the bottom-right" );
+		deepEqual( [ offset2.top, offset2.left ], [ windowHeight - 200, 0 ], "after togglePosition, iframe is displayed at the bottom-left" );
+		deepEqual( [ offset3.top, offset3.left ], [ 0, windowWidth - 200 ], "after togglePosition, iframe is displayed at the top-right" );
+		deepEqual( [ offset4.top, offset4.left ], [ 0, 0 ], "after togglePosition, iframe is displayed at the top-left" );
+
+		guest1.close();
+		guest2.close();
+		guest3.close();
+		guest4.close();
+	});
+
+	test("toggleSize from host", function() {
+		guest1 = new froglet( "empty.html", {
+			top: 0,
+			left: 0,
+			width: 200,
+			height: 200
+		});
+
+		guest1.toggleSize();
+		$frame1 = $( guest1[0] );
+
+		equal( $frame1.width(), 20, "after toggleSize, iframe width is 20px" );
+		equal( $frame1.height(), 20, "after toggleSize, iframe height is 20px" );
+		equal( guest1.state, "min", "after toggleSize, iframe state is 'min'" );
+
+		guest1.toggleSize();
+
+		equal( $frame1.width(), 200, "after a 2nd toggleSize, iframe is back to full width" );
+		equal( $frame1.height(), 200, "after a 2nd toggleSize, iframe is back to full height" );
+		equal( guest1.state, "open", "after a 2nd toggleSize, iframe state is 'open'" );
+
+		guest1.close();
+	});
+
+	test("togglePop from host", function() {
+		stop();
+		var shouldBePopup = false,
+			nbMsgs = 0;
+
+		guest1 = new froglet( "popup.html", {
+			top: 0,
+			left: 0,
+			width: 200,
+			height: 200
+		});
+
+		setTimeout(function() {
+			shouldBePopup = true;
+			guest1.togglePop();
+		}, 1000);
+		setTimeout(function() {
+			shouldBePopup = false;
+			guest1.togglePop();
+		}, 2000);
+		setTimeout(function() {
+			guest1.emit("ask");
+		}, 3000);
+
+		guest1.on("ispopup", function( isPopup ) {
+			equal( isPopup, shouldBePopup, "!!window.opener emited by guest is correct" );
+			equal( guest1.state, shouldBePopup ? "popup" : "open", "state of the guest is correct" );
+			equal( $( guest1[0] ).css( "display" ), shouldBePopup ? "none" : "block", "display of the guest is correct" );
+
+			if ( ++nbMsgs == 3 ) {
+				guest1.close();
+				start();
+			}
+		});
 	});
 });
 </script>

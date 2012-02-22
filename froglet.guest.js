@@ -9,7 +9,7 @@ var hostWindow = ( window.opener || window ).parent,
 	_message = "message",
 	routes = {},
 	container,
-	listen, msgEvent, ready, popup, i;
+	listen, msgEvent, ready, i;
 
 // You're wasting my time!
 //if ( !hostWindow ) { return; }
@@ -24,7 +24,7 @@ location.search.replace( /(?:\?|&)flId=(\w*?)(?:&|#|$)/, function(a,b) {
 if ( isPopup ) {
 	i = hostWindow.frames.length;
 	while ( i-- ) {
-		if ( hostWindow.frames[i].id == id ) {
+		if ( hostWindow.frames[i].froglet.id == id ) {
 			proxy = hostWindow.frames[i];
 			break;
 		}
@@ -80,7 +80,8 @@ function insertControls() {
 	// event delegation
 	container.onclick = function( e, internal ) {
 		var target = e ? e.target : window.event.srcElement,
-			type = target.id.replace( /^fl_(\w*?)$/, "$1" );
+			type = target.id.replace( /^fl_(\w*?)$/, "$1" ),
+			popup, width, height, toClose;
 
 		if ( type == "toggleSize" ) {
 			if ( target.title == "Minimize" ) {
@@ -97,17 +98,19 @@ function insertControls() {
 			// ask host what is the current position of the widget in the iframe
 			froglet.emit( "pos", undefined, true );
 
+			width = ( ( internal && internal[0] ) || window.innerWidth || docEl.clientWidth );
+			height = ( ( internal && internal[1] ) || window.innerHeight || docEl.clientHeight );
+
 			// open popup
-			popup = open( location, "",
-				"width=" + ( window.innerWidth || docEl.clientWidth ) +
-				",height=" + ( window.innerHeight || docEl.clientHeight )
+			froglet.popup = popup = open( location, "",
+				"width=" + width +
+				",height=" + height
 			);
 
 			// In Chrome, the size of the popup includes the browser chrome.
 			// In all browser, the position of the popup is calculated by the host
 			// and only available after the popup has been opened
 			// Use a setTimeout to fix the size if needed and set the position of the popup
-			var height = window.innerHeight;
 			setTimeout(function() {
 				var diffH = height - popup.innerHeight;
 				diffH && popup.resizeBy( 0, diffH );
@@ -115,10 +118,14 @@ function insertControls() {
 			}, 200);
 
 		} else if ( ( type == "close" || type == "togglePop" ) && isPopup ) {
-			close();
+			// "warn" the proxy that there's no more popup
+			proxy && ( proxy.froglet.popup = undefined );
+			// wait for the last message to be emitted before closing
+			toClose = true;
 		}
 
 		!internal && froglet.emit( type, undefined, true );
+		toClose && close();
 	}
 
 	body.appendChild( container );
@@ -134,15 +141,15 @@ window[ listen ](msgEvent, function( e ) {
 		i;
 
 	// proxy messages to the popup
-	if ( message.proxy ) {
-		popup.postMessage( e.data, "*" );
+	if ( froglet.popup && type != "pos" ) {
+		froglet.popup.postMessage( e.data, "*" );
 
 	} else if ( message.internal ) {
 		type == "pos" ?
 			// store position
 			position = [ screenX + message.payload[0], screenY + message.payload[1] ] :
 			// toggleSize, close, etc.
-			container.onclick( { target: document.getElementById( "fl_" + type ) }, true );
+			container.onclick( { target: document.getElementById( "fl_" + type ) }, message.payload || true );
 
 	// dispatch payload
 	} else if ( ( listeners = routes[ type ] ) ) {
@@ -155,6 +162,7 @@ window[ listen ](msgEvent, function( e ) {
 
 // API availble to guest window
 window.froglet = {
+	id: id,
 	emit: function( type, payload, internal ) {
 		var message = { 
 			flId: id,
@@ -162,7 +170,7 @@ window.froglet = {
 		};
 
 		internal && ( message.internal = internal );
-		payload && ( message.payload = payload );
+		payload != undefined && ( message.payload = payload );
 
 		hostWindow.postMessage( JSON.stringify( message ), "*" );
 	},

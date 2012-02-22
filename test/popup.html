@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../froglet.guest.js"></script>  
+</head>
+<body>
+<script>
+	froglet.emit("ispopup", !!window.opener );
+	froglet.on("ask", function() {
+		froglet.emit("ispopup", !!window.opener );
+	});
+</script>
+</body>
+</html>
