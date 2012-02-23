@@ -24,7 +24,7 @@ $(function() {
 		windowHeight, windowWidth;
 
 	test("Create guest iframe", function() {
-		guest1 = new froglet( "empty.html" );
+		guest1 = froglet( "empty.html" );
 
 		equal( guest1.state, "open", "state of a newly created froglet is 'open'" );
 		equal( document.getElementsByTagName("iframe").length, 1, "One iframe is added to the DOM when a guest is created" );
@@ -48,7 +48,7 @@ $(function() {
 	});
 
 	test("Create guest iframe with params", function() {
-		guest1 = new froglet( "empty.html", {
+		guest1 = froglet( "empty.html", {
 			top: 0,
 			left: 0,
 			width: 200,
@@ -147,25 +147,25 @@ $(function() {
 	});
 
 	test("guest position & togglePosition from host", function() {
-		guest1 = new froglet( "empty.html", {
+		guest1 = froglet( "empty.html", {
 			top: 0,
 			left: 0,
 			width: 200,
 			height: 200
 		});
-		guest2 = new froglet( "empty.html", {
+		guest2 = froglet( "empty.html", {
 			top: 0,
 			right: 0,
 			width: 200,
 			height: 200
 		});
-		guest3 = new froglet( "empty.html", {
+		guest3 = froglet( "empty.html", {
 			bottom: 0,
 			left: 0,
 			width: 200,
 			height: 200
 		});
-		guest4 = new froglet( "empty.html", {
+		guest4 = froglet( "empty.html", {
 			bottom: 0,
 			right: 0,
 			width: 200,
@@ -212,7 +212,7 @@ $(function() {
 	});
 
 	test("toggleSize from host", function() {
-		guest1 = new froglet( "empty.html", {
+		guest1 = froglet( "empty.html", {
 			top: 0,
 			left: 0,
 			width: 200,
@@ -241,7 +241,7 @@ $(function() {
 			nbMsgs = 0,
 			defaultDisplay;
 
-		guest1 = new froglet( "popup.html", {
+		guest1 = froglet( "popup.html", {
 			top: 0,
 			left: 0,
 			width: 200,

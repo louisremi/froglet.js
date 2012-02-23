@@ -23,7 +23,7 @@ if ( _addEventListener in window ) {
 	msgEvent = "on" + _message;
 }
 
-function Guest( url, options ) {
+function Froglet( url, options ) {
 	options = extend( {}, defaults, options );
 	options.top != undefined && options.bottom === 0 && ( options.bottom = undefined );
 	options.right != undefined && options.left === 0 && ( options.left = undefined );
@@ -74,7 +74,7 @@ function Guest( url, options ) {
 }
 
 // API available to host window
-Guest.prototype = {
+Froglet.prototype = {
 	toggleSize: function( noEmit ) {
 		var frameStyle = this[0].style;
 
@@ -201,7 +201,11 @@ Guest.prototype = {
 	}
 };
 
-window.froglet = Guest;
+// public API
+window.froglet = function( url, options ) {
+	return new Froglet( url, options );
+};
+froglet.fn = Froglet.prototype;
 
 // add "px" to a unitless dimension
 function dim(v){return +v==v?v+"px":v}
