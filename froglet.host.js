@@ -213,7 +213,4 @@ function dim(v){return +v==v?v+"px":v}
 // extend an object
 function extend(c){for(var e=arguments.length,d=0,a,b;d++<e;)if(a=arguments[d],null!=a&&a!=c)for(b in a)void 0!==a[b]&&(c[b]=a[b]);return c};
 
-// return top and left position relative to the window
-function getPos(e,b) {b=e.getBoundingClientRect();return[b.left,b.top]}
-
 })(window,document,Math,parseFloat);

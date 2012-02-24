@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../froglet.guest.js"></script>
+</head>
+<body>
+<script>
+	var nextState = {state: Math.random()},
+		prevState = froglet.getState();
+
+	froglet.saveState = function() {
+		return nextState;
+	};
+
+	froglet.emit( "prevState", prevState );
+	froglet.emit( "nextState", nextState );
+</script>
+</body>
+</html>

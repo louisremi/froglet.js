@@ -7,9 +7,10 @@ var hostWindow = ( window.opener || window ).parent,
 	proxy,
 	_addEventListener = "addEventListener",
 	_message = "message",
+	screenProps,
 	routes = {},
 	container,
-	listen, msgEvent, ready, i;
+	listen, msgEvent, i;
 
 // find the id of this widget in the url
 location.search.replace( /(?:\?|&)flId=(\w*?)(?:&|#|$)/, function(a,b) {
@@ -42,14 +43,12 @@ if ( _addEventListener in window ) {
 		}
 	});
 }
+screenProps = window.screenX != undefined ? [ "X", "Y" ] : [ "Left", "Top" ];
 
-function insertControls() {
-	// simple way to make sure that froglet is only initialized once
-	if ( ready ) { return; }
-
-	var divs = "",
+function buildControls() {
+	var div,
+		divs = "",
 		btns = { close: [ "Close", "\u2297" ]	},
-		body = document.body,
 		style, btn;
 
 	if ( !isPopup ) {
@@ -70,68 +69,81 @@ function insertControls() {
 
 	style += "#fl_togglePosition:hover:after{content:'\u229b'}";
 
-	container = document.createElement( "div" );
-	container.id = "fl_controls";
-	container.innerHTML = divs + "&nbsp;<style id='fl_style'>" + style + "</style>";
+	div = document.createElement( "div" );
+	div.id = "fl_controls";
+	div.innerHTML = divs + "&nbsp;<style id='fl_style'>" + style + "</style>";
 
 	// event delegation
-	container.onclick = function( e, internal ) {
-		var target = e ? e.target : window.event.srcElement,
-			type = target.id.replace( /^fl_(\w*?)$/, "$1" ),
-			popup, width, height, toClose;
+	div.onclick = _onclick;
 
-		if ( type == "toggleSize" ) {
-			if ( target.title == "Minimize" ) {
-				target.title = "Maximize";
-				body.style.overflow = "hidden";
-				container.className = "flMin";
-			} else {
-				target.title = "Minimize";
-				body.style.overflow = "";
-				container.className = "";
-			}
+	return div;
+}
 
-		} else if ( type == "togglePop" && !isPopup ) {
-			// ask host what is the current position of the widget in the iframe
-			froglet.emit( "pos", undefined, true );
+function insertControls() {
+	document.body.appendChild( container );
+}
 
-			width = ( ( internal && internal[0] ) || window.innerWidth || docEl.clientWidth );
-			height = ( ( internal && internal[1] ) || window.innerHeight || docEl.clientHeight );
+// event delegation
+function _onclick( e, internal ) {
+	var target = e ? e.target : window.event.srcElement,
+		type = target.id.replace( /^fl_(\w*?)$/, "$1" ),
+		popup, width, height, toClose;
 
-			// open popup
-			froglet.popup = popup = open( location, "",
-				"width=" + width +
-				",height=" + height
-			);
-
-			// In Chrome, the size of the popup includes the browser chrome.
-			// In all browser, the position of the popup is calculated by the host
-			// and only available after the popup has been opened
-			// Use a setTimeout to fix the size if needed and set the position of the popup
-			setTimeout(function() {
-				var diffH = height - popup.innerHeight;
-				diffH && popup.resizeBy( 0, diffH );
-				popup.moveTo.apply( popup, position );
-			}, 200);
-
-		} else if ( ( type == "close" || type == "togglePop" ) && isPopup ) {
-			// "warn" the proxy that there's no more popup
-			proxy && ( proxy.froglet.popup = undefined );
-			// wait for the last message to be emitted before closing
-			toClose = true;
+	if ( type == "toggleSize" ) {
+		if ( target.title == "Minimize" ) {
+			target.title = "Maximize";
+			//body.style.overflow = "hidden";
+			container.className = "flMin";
+		} else {
+			target.title = "Minimize";
+			//body.style.overflow = "";
+			container.className = "";
 		}
 
-		!internal && froglet.emit( type, undefined, true );
-		toClose && close();
+	} else if ( type == "togglePop" && !isPopup ) {
+		// ask host what is the current position of the widget in the iframe
+		froglet.emit( "pos", undefined, true );
+
+		width = ( ( internal && internal[0] ) || window.innerWidth || docEl.clientWidth );
+		height = ( ( internal && internal[1] ) || window.innerHeight || docEl.clientHeight );
+
+		// open popup
+		froglet.popup = popup = open( location, "",
+			"width=" + width +
+			",height=" + height
+		);
+
+		// In Chrome, the size of the popup includes the browser chrome.
+		// In all browser, the position of the popup is calculated by the host
+		// and only available after the popup has been opened
+		// Use a setTimeout to fix the size if needed and set the position of the popup
+		setTimeout(function() {
+			var diffH = height - popup.innerHeight;
+			diffH && popup.resizeBy( 0, diffH );
+			popup.moveTo( position[0], position[1] );
+		}, 200);
+
+	} else if ( ( type == "close" || type == "togglePop" ) && isPopup ) {
+		// "warn" the proxy that there's no more popup
+		proxy && ( type == "close" ?
+			proxy.froglet.popup = undefined :
+			proxy.location.reload()
+		);
+		// wait for the last message to be emitted before closing
+		toClose = true;
 	}
 
-	body.appendChild( container );
+	// save current state
+	if ( type == "togglePop" && froglet.saveState ) {
+		localStorage[ id ] = JSON.stringify( froglet.saveState() );
+	}
 
-	ready = true;
+	!internal && froglet.emit( type, undefined, true );
+	toClose && close();
 }
 
 // message routing
-function onmessage( e ) {
+function _onmessage( e ) {
 	var message = JSON.parse( e.data ),
 		type = message.type,
 		listeners,
@@ -144,9 +156,9 @@ function onmessage( e ) {
 	} else if ( message.internal ) {
 		type == "pos" ?
 			// store position
-			position = [ ( window.screenX || screenLeft ) + message.payload[0], ( window.screenY || screenTop ) + message.payload[1] ] :
+			position = [ window[ "screen" + screenProps[0] ] + message.payload[0], window[ "screen" + screenProps[1] ] + message.payload[1] ] :
 			// toggleSize, close, etc.
-			container.onclick( { target: document.getElementById( "fl_" + type ) }, message.payload || true );
+			_onclick( { target: container.querySelector( "#fl_" + type ) }, message.payload || true );
 
 	// dispatch payload
 	} else if ( ( listeners = routes[ type ] ) ) {
@@ -157,8 +169,10 @@ function onmessage( e ) {
 	}
 }
 
+container = buildControls();
+
 // setup message router
-window[ listen ](msgEvent, onmessage, false);
+window[ listen ](msgEvent, _onmessage, false);
 
 // API availble to guest window
 window.froglet = {
@@ -194,7 +208,14 @@ window.froglet = {
 		}
 	},
 
-	_direct: onmessage
+	getState: function() {
+		var state = localStorage[ id ];
+		// IE8 throws an error when deleting a key that is undefined
+		state && delete localStorage[ id ];
+		return state && JSON.parse( state );
+	},
+
+	_direct: _onmessage
 };
 
 // overwrite froglet.emit to use a proxy if available

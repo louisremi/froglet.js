@@ -275,6 +275,34 @@ $(function() {
 			}
 		});
 	});
+
+	test("save/restore state", function() {
+		stop();
+
+		var guest1 = froglet("state.html", {
+				top: 0,
+				left: 0,
+				width: 200,
+				height: 200
+			}),
+			currState = undefined,
+			nbMsgs = 0;
+
+		guest1.on("nextState", function( data ) {
+			currState = data;
+		});
+
+		guest1.on("prevState", function( data ) {
+			deepEqual( data, currState, "data has correctly been restored" );
+
+			if ( ++nbMsgs == 3 ) {
+				guest1.close();
+				start();
+			} else {
+				guest1.togglePop();
+			}
+		});
+	});
 });
 </script>
 
