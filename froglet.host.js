@@ -29,12 +29,24 @@ function Froglet( url, options ) {
 	options.right != undefined && options.left === 0 && ( options.left = undefined );
 
 	var self = this,
+		// build state fragment
+		state = options.state ?
+			"&flIni=" + encodeURIComponent( JSON.stringify( options.state ) ) :
+			"",
 		frameDomain;
 
 	// give this guest a unique identifier to allow multiple guests
 	this.id = "fl" + Math.round( Math.random() * 1E6 );
 
-	this.url = url
+	// insert the identifier & the position in the url
+	this.url = url.replace(/(\?|#|$)/, function( chr ) {
+		return "?flId=" + self.id + (
+			chr == "?" ? "&":
+			chr == "#" ? "#":
+			""
+		) + state;
+	});
+
 	this.options = options;
 	this.routes = {};
 	
@@ -51,6 +63,7 @@ function Froglet( url, options ) {
 			type = message.type,
 			bcr, listeners,
 			i;
+
 		// filter the messages according to their origin and id
 		if ( e.origin !== frameDomain || message.flId !== self.id ) {	return;	}
 
@@ -186,14 +199,7 @@ Froglet.prototype = {
 
 		document.body.appendChild( frame );
 
-		// insert the identifier & the position in the url
-		frame.src = this.url.replace(/(\?|#|$)/, function( chr ) {
-			return "?flId=" + self.id + (
-				chr == "?" ? "&":
-				chr == "#" ? "#":
-				""
-			);
-		});
+		frame.src = this.url;
 
 		this[0] = frame;
 		this.guestWindow = frame.contentWindow;

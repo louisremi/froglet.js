@@ -13,9 +13,7 @@ var hostWindow = ( window.opener || window ).parent,
 	listen, msgEvent, i;
 
 // find the id of this widget in the url
-location.search.replace( /(?:\?|&)flId=(\w*?)(?:&|#|$)/, function(a,b) {
-	id = b;
-});
+id = getFrag( "flId=(\\w*?)" );
 
 // find the proxy iframe if the widget is loaded in a popup
 // a proxy is required in IE, since window.opener.postMessage is forbiden
@@ -187,7 +185,10 @@ window.froglet = {
 		internal && ( message.internal = internal );
 		payload != undefined && ( message.payload = jsonPayload ? JSON.parse( payload ) : payload );
 
-		hostWindow.postMessage( JSON.stringify( message ), "*" );
+		// make sure postMessage is asynchronous
+		setTimeout(function() {
+			hostWindow.postMessage( JSON.stringify( message ), "*" );
+		}, 0);
 	},
 
 	on: function( type, listener ) {
@@ -210,8 +211,15 @@ window.froglet = {
 
 	getState: function() {
 		var state = localStorage[ id ];
-		// IE8 throws an error when deleting a key that is undefined
-		state && delete localStorage[ id ];
+
+		if ( state ) {
+			// IE8 throws an error when deleting a key that is undefined
+			delete localStorage[ id ];
+		} else {
+			state = getFrag( "flIni=(.*?)" );
+			state && ( state = decodeURIComponent( state ) );
+		}
+
 		return state && JSON.parse( state );
 	},
 
@@ -223,5 +231,16 @@ proxy && ( froglet.emit = function( type, payload, internal ) {
 	// IE only support passing strings between window and window.opener
 	proxy.froglet.emit( type, JSON.stringify( payload ), internal, true );
 });
+
+function getFrag( fragId ) {
+	var val,
+		search = location.search;
+
+	search.replace( RegExp( "(?:\\?|&)" + fragId + "(?:&|#|$)" ), function(a,b) {
+		val = b;
+	});
+
+	return val;
+}
 
 })(window,document);

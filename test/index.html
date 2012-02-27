@@ -279,14 +279,31 @@ $(function() {
 	test("save/restore state", function() {
 		stop();
 
-		var guest1 = froglet("state.html", {
+		var currState = { state: Math.random() },
+			guest2 = froglet("state.html", {
 				top: 0,
 				left: 0,
 				width: 200,
 				height: 200
 			}),
-			currState = undefined,
+			guest1 = froglet("state.html", {
+				state: currState,
+				top: 0,
+				left: 0,
+				width: 200,
+				height: 200
+			}),
 			nbMsgs = 0;
+
+		guest2.on("prevState", function( data ) {
+			equal( data, undefined, "by default, the state of the iframe should be undefined");
+
+			if ( ++nbMsgs == 4 ) {
+				guest1.close();
+				guest2.close();
+				start();
+			}
+		});
 
 		guest1.on("nextState", function( data ) {
 			currState = data;
@@ -295,8 +312,9 @@ $(function() {
 		guest1.on("prevState", function( data ) {
 			deepEqual( data, currState, "data has correctly been restored" );
 
-			if ( ++nbMsgs == 3 ) {
+			if ( ++nbMsgs == 4 ) {
 				guest1.close();
+				guest2.close();
 				start();
 			} else {
 				guest1.togglePop();
